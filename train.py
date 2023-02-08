@@ -8,7 +8,7 @@ from sklearn.externals import joblib
 import os
 
 def PCC_RMSE(y_true, y_pred):
-    alpha = args.alpha
+    alpha = 0.7 ## set to default to avoid problems 
     
     fsp = y_pred - tf.keras.backend.mean(y_pred)
     fst = y_true - tf.keras.backend.mean(y_true)
@@ -38,7 +38,7 @@ def PCC(y_true, y_pred):
     return pcc
 
 # CNN Architecture
-def create_model(input_size, lr=0.001):
+def create_model(input_size, rate, clipvalue, lr=0.001,):
     model = tf.keras.Sequential()
     model.add(tf.keras.layers.Conv2D(32, 4, 1, input_shape=input_size))
     model.add(tf.keras.layers.Activation("relu"))
@@ -53,18 +53,18 @@ def create_model(input_size, lr=0.001):
 
     model.add(tf.keras.layers.Dense(100, kernel_regularizer=tf.keras.regularizers.l2(0.01), ))
     model.add(tf.keras.layers.Activation("relu"))
-    model.add(tf.keras.layers.Dropout(rate=args.rate))
+    model.add(tf.keras.layers.Dropout(rate=rate))
     model.add(tf.keras.layers.BatchNormalization())
 
     model.add(tf.keras.layers.Dense(50, kernel_regularizer=tf.keras.regularizers.l2(0.01), ))
     model.add(tf.keras.layers.Activation("relu"))
-    model.add(tf.keras.layers.Dropout(rate=args.rate))
+    model.add(tf.keras.layers.Dropout(rate=rate))
     model.add(tf.keras.layers.BatchNormalization())
 
     model.add(tf.keras.layers.Dense(1, kernel_regularizer=tf.keras.regularizers.l2(0.01), ))
     model.add(tf.keras.layers.Activation("relu"))
 
-    sgd = tf.keras.optimizers.SGD(lr=lr, momentum=0.9, decay=1e-6, clipvalue=args.clipvalue)
+    sgd = tf.keras.optimizers.SGD(lr=lr, momentum=0.9, decay=1e-6, clipvalue=clipvalue)
     model.compile(optimizer=sgd, loss=PCC_RMSE, metrics=["mse", PCC, RMSE, PCC_RMSE])
     
     return model
