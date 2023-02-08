@@ -9,6 +9,7 @@ from sklearn import preprocessing
 import tensorflow as tf
 from joblib import Parallel, delayed
 import joblib
+import itertools
 
 shells = 62
 outermost = 0.05 * (shells+1)
@@ -40,7 +41,7 @@ def load_csv(csv_file, data_dir):
     ligand_files = [os.path.join(data_dir, ligand_file) for ligand_file in df['ligand']]
     keys = df['key']
     pks = df['pk']
-    return protein_files, ligand_files, keys, pks
+    return protein_files[:10], ligand_files[:10], keys[:10], pks[:10]
 
 def generate_all_features(csv_file, data_dir):
     protein_files, ligand_files, keys, pks = load_csv(csv_file, data_dir)
@@ -53,28 +54,35 @@ def generate_all_features(csv_file, data_dir):
         #     print(f'Could not generate features for {key}')
 
     all_features = np.array(all_features)  
+    all_elements = ['H', 'C',  'O', 'N', 'P', 'S', 'Hal', 'DU']
+    all_residues = ['GLY', 'ALA', 'VAL', 'LEU', 'ILE', 'PRO', 'PHE', 'TYR', 'TRP', 'SER',
+               'THR', 'CYS', 'MET', 'ASN', 'GLN', 'ASP', 'GLU', 'LYS', 'ARG', 'HIS', 'OTH']
+    feat_keys = ["_".join(x) for x in list(itertools.product(all_residues, all_elements))]
     columns = []
-    for i, n in enumerate(keys * len(ncutoffs)):
+    for i, n in enumerate(feat_keys * len(ncutoffs)):
         columns.append(f'{n}_{i}')
+    print(all_features.shape)
+    print(len(columns))
     return pd.DataFrame(all_features, columns=columns)
 
 def train_model(args, model_name):
-    model = create_model()
-    train = pd.read_csv(args.train_file, index_col=0)
-    val = pd.read_csv(args.val_file, index_col=0)
+    model = create_model(args.shape, args.rate, args.clipvalue, lr=args.lr)
+    train = pd.read_csv(f'temp_features/{args.csv_file.split("/")[-1].split(".")[0]}_features.csv', index_col=0)
+    val = pd.read_csv(f'temp_features/{args.val_csv_file.split("/")[-1].split(".")[0]}_features.csv', index_col=0)
     n_features = 21*8*62
     X_train = train.values[:, :n_features]
     X_valid = val.values[:, :n_features]
     scaler = preprocessing.StandardScaler()
-    joblib.dump(scaler, f'temp_model/{model_name}.scaler')
     X_train_std = scaler.fit_transform(X_train).reshape([-1] + args.shape)
     X_valid_std = scaler.transform(X_valid).reshape([-1] + args.shape)
-    y_train = train['pk'].values
-    y_valid = val['pk'].values
+    joblib.dump(scaler, f'temp_models/{model_name}.scaler')
+    y_train = pd.read_csv(args.csv_file)['pk'].values
+    y_valid = pd.read_csv(args.val_csv_file)['pk'].values
+    print(y_valid)
     stop = tf.keras.callbacks.EarlyStopping(monitor='val_loss', min_delta=0.001, patience=args.patience,
                                             verbose=1, mode='auto', )
     logger = tf.keras.callbacks.CSVLogger("logfile", separator=',', append=False)
-    bestmodel = tf.keras.callbacks.ModelCheckpoint(filepath=f'temp_model/{model_name}', verbose=1, save_best_only=True)
+    bestmodel = tf.keras.callbacks.ModelCheckpoint(filepath=f'temp_models/{model_name}', verbose=1, save_best_only=True)
         
     history = model.fit(X_train_std, y_train,
                         validation_data = (X_valid_std, y_valid),   
@@ -86,16 +94,16 @@ def train_model(args, model_name):
 def predict(args):
     alpha = args.alpha
 
-    test = pd.read_csv(args.inp)
-    test_index = test['key']
-    true_values = test['pk']
+    test = pd.read_csv(f'temp_features/{args.val_csv_file.split("/")[-1].split(".")[0]}_features.csv', index_col=0)
+    test_index = pd.read_csv(args.val_csv_file)['key'].values
+    true_values = pd.read_csv(args.val_csv_file)['pk'].values
     
     X_test = test.values
     
-    scaler = joblib.load(args.scaler)
+    scaler = joblib.load(f'temp_models/{args.model_name}.scaler')
     X_test_std = scaler.transform(X_test).reshape([-1] + args.shape)
     
-    model = tf.keras.models.load_model(args.model,
+    model = tf.keras.models.load_model(f'temp_models/{args.model_name}',
             custom_objects={'RMSE': RMSE,
                 'PCC': PCC,
                 'PCC_RMSE': PCC_RMSE})
@@ -134,18 +142,21 @@ if __name__ == '__main__':
                         help="Input. The number of times all samples in the training set pass the CNN model.")
     parser.add_argument("--patience", type=int, default=30,
                         help="Input. Number of epochs with no improvement after which training will be stopped.")
-    
     args = parser.parse_args()
+    print(args.rate)
     if args.train:
-        if not os.path.exists({f'temp_features/{args.csv_file.split("/")[-1].split(".")[0]}_features.csv'}):
+        if not os.path.exists(f'temp_features/{args.csv_file.split("/")[-1].split(".")[0]}_features.csv'):
             df = generate_all_features(args.csv_file, args.data_dir)
             df.to_csv(f'temp_features/{args.csv_file.split("/")[-1].split(".")[0]}_features.csv')
-        if not os.path.exists({f'temp_features/{args.val_csv_file.split("/")[-1].split(".")[0]}_features.csv'}):
+        if not os.path.exists(f'temp_features/{args.val_csv_file.split("/")[-1].split(".")[0]}_features.csv'):
             df = generate_all_features(args.val_csv_file, args.val_data_dir)
             df.to_csv(f'temp_features/{args.val_csv_file.split("/")[-1].split(".")[0]}_features.csv')
         train_model(args, args.model_name)
     if args.predict:
-        df = predict()
-        df.to_csv(args.out, index=False)
+        if not os.path.exists(f'temp_features/{args.val_csv_file.split("/")[-1].split(".")[0]}_features.csv'):
+            df = generate_all_features(args.val_csv_file, args.val_data_dir)
+            df.to_csv(f'temp_features/{args.val_csv_file.split("/")[-1].split(".")[0]}_features.csv')
+        df = predict(args)
+        df.to_csv(f'results/{args.model_name}_{args.val_csv_file.split("/")[-1]}', index=False)
 
 
