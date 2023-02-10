@@ -41,7 +41,7 @@ def load_csv(csv_file, data_dir):
     ligand_files = [os.path.join(data_dir, ligand_file) for ligand_file in df['ligand']]
     keys = df['key']
     pks = df['pk']
-    return protein_files[:10], ligand_files[:10], keys[:10], pks[:10]
+    return protein_files, ligand_files, keys, pks
 
 def generate_all_features(csv_file, data_dir):
     protein_files, ligand_files, keys, pks = load_csv(csv_file, data_dir)
