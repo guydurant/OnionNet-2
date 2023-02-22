@@ -46,13 +46,6 @@ def load_csv(csv_file, data_dir):
 def generate_all_features(csv_file, data_dir):
     protein_files, ligand_files, keys, pks = load_csv(csv_file, data_dir)
     all_features = Parallel(n_jobs=-1)(delayed(generate_features_per_complex)(key, protein_file, ligand_file) for key, protein_file, ligand_file in tqdm(zip(keys, protein_files, ligand_files)))
-    # for protein_file, ligand_file, key, in tqdm(zip(protein_files, ligand_files, keys)):
-    #     # try:
-    #         features = generate_features_per_complex(key, protein_file, ligand_file)
-    #         all_features.append(features)
-    #     # except:
-        #     print(f'Could not generate features for {key}')
-
     all_features = np.array(all_features)  
     all_elements = ['H', 'C',  'O', 'N', 'P', 'S', 'Hal', 'DU']
     all_residues = ['GLY', 'ALA', 'VAL', 'LEU', 'ILE', 'PRO', 'PHE', 'TYR', 'TRP', 'SER',
@@ -61,8 +54,6 @@ def generate_all_features(csv_file, data_dir):
     columns = []
     for i, n in enumerate(feat_keys * len(ncutoffs)):
         columns.append(f'{n}_{i}')
-    print(all_features.shape)
-    print(len(columns))
     return pd.DataFrame(all_features, columns=columns)
 
 def train_model(args, model_name):
@@ -78,12 +69,12 @@ def train_model(args, model_name):
     joblib.dump(scaler, f'temp_models/{model_name}.scaler')
     y_train = pd.read_csv(args.csv_file)['pk'].values
     y_valid = pd.read_csv(args.val_csv_file)['pk'].values
-    print(y_valid)
     stop = tf.keras.callbacks.EarlyStopping(monitor='val_loss', min_delta=0.001, patience=args.patience,
                                             verbose=1, mode='auto', )
     logger = tf.keras.callbacks.CSVLogger("logfile", separator=',', append=False)
     bestmodel = tf.keras.callbacks.ModelCheckpoint(filepath=f'temp_models/{model_name}', verbose=1, save_best_only=True)
-        
+    # run keras model on GPU
+
     history = model.fit(X_train_std, y_train,
                         validation_data = (X_valid_std, y_valid),   
                         epochs = args.epochs,
@@ -93,7 +84,6 @@ def train_model(args, model_name):
                     
 def predict(args):
     alpha = args.alpha
-
     test = pd.read_csv(f'temp_features/{args.val_csv_file.split("/")[-1].split(".")[0]}_features.csv', index_col=0)
     test_index = pd.read_csv(args.val_csv_file)['key'].values
     true_values = pd.read_csv(args.val_csv_file)['pk'].values
@@ -123,6 +113,7 @@ if __name__ == '__main__':
     parser.add_argument('--model_name', type=str, default='test')
     parser.add_argument('--train', action='store_true')
     parser.add_argument('--predict', action='store_true')
+    parser.add_argument('--gpus', type=int, default=1)
     parser.add_argument("--shape", type=int, default=[84, 124, 1], nargs="+",
                         help="Input. Reshape the features.")
     parser.add_argument("--lr", type=float, default=0.001,
@@ -143,7 +134,6 @@ if __name__ == '__main__':
     parser.add_argument("--patience", type=int, default=30,
                         help="Input. Number of epochs with no improvement after which training will be stopped.")
     args = parser.parse_args()
-    print(args.rate)
     if args.train:
         if not os.path.exists(f'temp_features/{args.csv_file.split("/")[-1].split(".")[0]}_features.csv'):
             df = generate_all_features(args.csv_file, args.data_dir)
@@ -151,7 +141,11 @@ if __name__ == '__main__':
         if not os.path.exists(f'temp_features/{args.val_csv_file.split("/")[-1].split(".")[0]}_features.csv'):
             df = generate_all_features(args.val_csv_file, args.val_data_dir)
             df.to_csv(f'temp_features/{args.val_csv_file.split("/")[-1].split(".")[0]}_features.csv')
-        train_model(args, args.model_name)
+        if args.gpus > 0:
+            with tf.device('/device:GPU:0'):
+                train_model(args, args.model_name)
+        else:
+            train_model(args, args.model_name)
     if args.predict:
         if not os.path.exists(f'temp_features/{args.val_csv_file.split("/")[-1].split(".")[0]}_features.csv'):
             df = generate_all_features(args.val_csv_file, args.val_data_dir)
