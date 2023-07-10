@@ -190,9 +190,9 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--csv_file", type=str, default="train.csv")
-    parser.add_argument("--test_csv_file", type=str, default="val.csv")
+    parser.add_argument("--val_csv_file", type=str, default="val.csv")
     parser.add_argument("--data_dir", type=str, default="data")
-    parser.add_argument("--test_data_dir", type=str, default="data")
+    parser.add_argument("--val_data_dir", type=str, default="data")
     parser.add_argument("--model_name", type=str, default="test")
     parser.add_argument("--train", action="store_true")
     parser.add_argument("--predict", action="store_true")
