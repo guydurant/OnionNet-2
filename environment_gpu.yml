@@ -115,9 +115,12 @@ dependencies:
       - scipy==1.4.1
       - setuptools==67.7.2
       - stack-data==0.6.2
-      - tensorboard==2.13.0
-      - tensorboard-data-server==0.7.0
-      - tensorflow-estimator==2.3.0
+      # - tensorboard==2.13.0
+      - tensorboard
+      # - tensorboard-data-server==0.7.0
+      - tensorboard-data-server
+      # - tensorflow-estimator==2.3.0
+      - tensorflow-estimator
       # - tensorflow-gpu==2.3.0
       - tensorflow
       - termcolor==2.3.0
