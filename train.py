@@ -4,7 +4,7 @@ import numpy as np
 from argparse import RawDescriptionHelpFormatter
 import argparse
 from sklearn import preprocessing
-from sklearn.externals import joblib
+import joblib
 import os
 
 
