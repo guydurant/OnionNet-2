@@ -44,7 +44,7 @@ dependencies:
   - mock=5.0.2=pyhd8ed1ab_0
   - ncurses=6.4=h6a678d5_0
   - numexpr=2.7.3=py38h43a58ef_1
-  - numpy-base=1.19.2=py38hfa32c7d_0
+  # - numpy-base=1.19.2=py38hfa32c7d_0
   - openbabel=3.1.1=py38hd2c4bc0_3
   - openssl=1.1.1t=h7f8727e_0
   - pcre=8.45=h295c915_0
