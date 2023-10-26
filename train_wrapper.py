@@ -18,7 +18,7 @@ ncutoffs = np.linspace(0.1, outermost, shells)
 
 def make_complex_pdb(key, protein_file, ligand_file, csv_file):
     if not os.path.exists(f'data/scratch/{csv_file.split("/")[-1].split(".")[0]}'):
-        os.mkdir(f'data/scratch/{csv_file.split("/")[-1].split(".")[0]}')
+        os.makedirs(f'data/scratch/{csv_file.split("/")[-1].split(".")[0]}')
     # ligand_file = ligand_file.replace('_pymol.sdf', '.mol2')
     # lig_mol = Chem.MolFromMolFile(ligand_file)
     # if lig_mol is None:
@@ -250,6 +250,10 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
     if args.train:
+        if not os.path.exists("data/models"):
+            os.makedirs("data/models")
+        if not os.path.exists("data/features"):
+            os.makedirs("data/features")
         if not os.path.exists(
             f'data/features/{args.csv_file.split("/")[-1].split(".")[0]}_features.csv'
         ):
@@ -272,6 +276,8 @@ if __name__ == "__main__":
                 f'data/features/{args.val_csv_file.split("/")[-1].split(".")[0]}_features.csv'
             )
         df = predict(args)
+        if not os.path.exists("data/results"):
+            os.makedirs("data/results")
         df.to_csv(
             f'data/results/{args.model_name}_{args.val_csv_file.split("/")[-1]}',
             index=False,
