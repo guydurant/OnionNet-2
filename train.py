@@ -93,9 +93,7 @@ def create_model(
     )
     model.add(tf.keras.layers.Activation("relu"))
 
-    sgd = tf.keras.optimizers.legacy.SGD(
-        lr=lr, momentum=0.9, decay=1e-6, clipvalue=clipvalue
-    )
+    sgd = tf.keras.optimizers.SGD(lr=lr, momentum=0.9 clipvalue=clipvalue)
     # model.compile(optimizer=sgd, loss=PCC_RMSE, metrics=["mse", PCC, RMSE, PCC_RMSE])
     # to avoid instability of PCC_RMSE, we use RMSE as the loss function
     model.compile(optimizer=sgd, loss=RMSE, metrics=["mse", PCC, RMSE, PCC_RMSE])
