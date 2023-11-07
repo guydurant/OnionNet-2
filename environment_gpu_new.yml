@@ -1,5 +1,6 @@
 name: OnionNet-GPU-2
 channels:
+  - anaconda
   - conda-forge
   - defaults
 dependencies:
@@ -28,6 +29,8 @@ dependencies:
   - charset-normalizer=3.2.0=pyhd8ed1ab_0
   - click=8.1.4=unix_pyh707e725_0
   - cryptography=38.0.4=py311hb3c386c_0
+  - cudatoolkit=11.8.0=h6a678d5_0
+  - cudnn=8.9.2.26=cuda11_0
   - expat=2.5.0=hcb278e6_1
   - flatbuffers=23.5.26=h59595ed_1
   - fontconfig=2.14.1=h4c34cd2_2
